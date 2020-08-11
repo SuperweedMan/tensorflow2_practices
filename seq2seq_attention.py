@@ -120,6 +120,36 @@ epochs = 20
 
 train_dataset = make_dateset(input_train, output_train, batch_size, epochs, True)
 eval_dataset = make_dateset(input_eval, output_eval, batch_size, 1, False)
-#%%
+
 for x, y in train_dataset.take(1):
     print(x, y)
+
+#%%
+embedding_units = 256
+units = 1024
+input_vocab_size = len(input_tokenizer.word_index) + 1
+ouptut_vocab_size = len(output_tokenzier.word_index) + 1
+class Encoder(tf.keras.Model):
+    def __init__(self, vocab_size, embedding_units, encoding_units, batch_size):
+        super(Encoder, self).__init__()
+        self.batch_size = batch_size
+        self.encoding_units = encoding_units
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_units)
+        self.gru = tf.keras.layers.GRU(self.encoding_units, return_sequences=True,
+                                       return_state=True, recurrent_initializer='glorot_uniform')
+
+    def call(self, x, hidden):
+        x = self.embedding(x)
+        output, state = self.gru(x, initial_state=hidden)
+        return output, state
+
+    def initialize_hidden_state(self):
+        return tf.zeros((self.batch_size, self.encoding_units))
+
+
+encoder = Encoder(input_vocab_size, embedding_units, units, batch_size)
+sample_hidden = encoder.initialize_hidden_state()
+sample_output, sample_hidden = encoder(x, sample_hidden)
+
+print(sample_output.shape)
+print(sample_hidden.shape)
